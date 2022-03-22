@@ -41,7 +41,14 @@ export default async function* streamMessages({
   signal?: AbortSignal;
 
   /** Parameters indicating the time range to stream. */
-  params: { deviceId: string; start: Time; end: Time; topics: readonly string[] };
+  params: {
+    deviceId: string;
+    start: Time;
+    end: Time;
+    topics: readonly string[];
+    replayPolicy?: "lastPerChannel" | "";
+    replayLookbackSeconds?: number;
+  };
 
   /**
    * Message readers are initialized out of band so we can parse message definitions only once.
@@ -66,6 +73,8 @@ export default async function* streamMessages({
     end: toRFC3339String(params.end),
     topics: params.topics,
     outputFormat: "mcap0",
+    replayPolicy: params.replayPolicy,
+    replayLookbackSeconds: params.replayLookbackSeconds,
   });
   if (controller.signal.aborted) {
     return;

@@ -4,6 +4,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import {
+  MessageEvent,
   PlayerCapabilities,
   PlayerPresence,
   PlayerState,
@@ -14,6 +15,7 @@ import {
   Initalization,
   MessageIteratorArgs,
   IteratorResult,
+  BackfillMessagesArgs,
 } from "./IIterableSource";
 import { IterablePlayer } from "./IterablePlayer";
 
@@ -30,6 +32,10 @@ class TestSource implements IIterableSource {
   }
 
   async *messageIterator(_args: MessageIteratorArgs): AsyncIterator<Readonly<IteratorResult>> {}
+
+  async backfillMessages(_args: BackfillMessagesArgs): Promise<MessageEvent<unknown>[]> {
+    return [];
+  }
 }
 
 type PlayerStateWithoutPlayerId = Omit<PlayerState, "playerId">;
@@ -147,22 +153,18 @@ describe("IterablePlayer", () => {
     // replace the message iterator with our own implementation
     // This implementation performs a seekPlayback during backfill.
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    const originalMethod = source.messageIterator;
-    source.messageIterator = async function* (args: MessageIteratorArgs) {
-      if (args.reverse === true) {
-        player.seekPlayback({ sec: 0, nsec: 0 });
-        source.messageIterator = originalMethod;
-      }
-      yield {
-        msgEvent: {
+    const originalMethod = source.backfillMessages;
+    source.backfillMessages = async function (_args: BackfillMessagesArgs) {
+      player.seekPlayback({ sec: 0, nsec: 0 });
+      source.backfillMessages = originalMethod;
+      return [
+        {
           topic: "foo",
           receiveTime: { sec: 0, nsec: 0 },
           message: undefined,
           sizeInBytes: 0,
         },
-        problem: undefined,
-        connectionId: 0,
-      };
+      ];
     };
 
     // starts a seek backfill
